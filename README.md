@@ -51,4 +51,93 @@
 
 - поля: название, сумма, валюта, период (месяц / год), дата списания, категория, чекбокс активности;
 - режим **редактирования** с отменой;
-- **HTML-версия:** JSON в `localStorage` (
+- **HTML-версия:** JSON в `localStorage` (ключ `subscriptions_json_db`);
+- **Electron:** JSON-файл в каталоге данных приложения + демо из [`default-subscriptions.json`](default-subscriptions.json).
+
+### 🎯 Дополнительно
+
+- иконки на карточках по **категории** (музыка, видео, игры, облако и т.д.);
+- при **пустой или повреждённой** базе автоматически подставляются встроенные демо-записи.
+
+---
+
+<a id="how-it-works"></a>
+
+## 🧠 Как это устроено
+
+1. **Однофайловый режим** — вся разметка, стили и логика в [`subscription-list.html`](subscription-list.html); при загрузке читается `localStorage`, при сохранении — запись JSON-строки.
+2. **Electron** — процесс [`main.js`](main.js) читает/пишет файл через `fs`; окно рендера получает данные только через [`preload.js`](preload.js) и `contextBridge` (без прямого доступа к Node в UI).
+
+---
+
+<a id="tech-stack"></a>
+
+## 💻 Стек технологий
+
+| Слой        | Технологии                          |
+| ----------- | ----------------------------------- |
+| Разметка    | HTML5                               |
+| Стили       | CSS3 (переменные, Grid, адаптив)    |
+| Логика      | JavaScript (ES5+ совместимый стиль) |
+| Хранение    | JSON + `localStorage` или файл    |
+| Десктоп     | Electron                            |
+
+---
+
+<a id="project-structure"></a>
+
+## 📁 Структура проекта
+
+```
+subscription-list-app/
+├── subscription-list.html    # автономная веб-версия (один файл)
+├── default-subscriptions.json  # встроенные демо-подписки (10 шт.)
+├── package.json
+├── main.js                     # главный процесс Electron
+├── preload.js                  # IPC: read / write БД
+├── index.html                  # оболочка окна Electron
+├── README.md
+└── src/
+    ├── renderer.js             # UI и логика окна Electron
+    └── styles.css              # стили десктоп-версии
+```
+
+---
+
+<a id="getting-started"></a>
+
+## ▶️ Запуск
+
+### Вариант A — только браузер
+
+Открой файл **`subscription-list.html`** двойным щелчком или через «Открыть с помощью» → браузер.
+
+### Вариант B — Electron
+
+Требуется [Node.js](https://nodejs.org/) (LTS).
+
+```bash
+git clone https://github.com/<username>/<repository>.git
+cd subscription-list-app
+npm install
+npm start
+```
+
+На Windows файл пользовательской БД обычно лежит в `%AppData%\subscription-list\subscriptions.json`.
+
+### Сброс демо (только HTML)
+
+В консоли браузера (F12):
+
+```js
+localStorage.removeItem('subscriptions_json_db');
+location.reload();
+```
+
+---
+
+<a id="license"></a>
+
+## 📄 Лицензия
+
+Проект предназначен для **учебного использования**. При необходимости добавь в репозиторий свой файл `LICENSE`.
