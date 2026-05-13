@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Список подписок</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --bg-elevated: #1a1a1a;
+      --bg-input: #242424;
+      --text: #f5f5f5;
+      --text-muted: #9ca3af;
+      --accent: #2ecc71;
+      --accent-glow: rgba(46, 204, 113, 0.35);
+      --danger: #e74c3c;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-pill: 999px;
+      --font: system-ui, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .app-header {
+      padding: 1.25rem 1.75rem;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .app-header h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .badge-total {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding: 0.35rem 0.75rem;
+      border-radius: var(--radius-pill);
+      border: 1px solid #333;
+      background: var(--bg-elevated);
+    }
+    .badge-total strong { color: var(--accent); font-weight: 600; }
+    .layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr min(380px, 100%);
+      gap: 1.5rem;
+      padding: 1.5rem 1.75rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+    .panel-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin: 0 0 1rem;
+    }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      position: relative;
+      border-radius: var(--radius-lg);
+      padding: 1.1rem 1.15rem;
+      background: linear-gradient(145deg, #1c2a22 0%, #151515 55%, #1a1a1a 100%);
+      border: 1px solid rgba(46, 204, 113, 0.25);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(46, 204, 113, 0.5), transparent 45%, transparent);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(46, 204, 113, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .status-dot.inactive { background: #555; box-shadow: none; }
+    .card h3 {
+      margin: 0 0 0.35rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+    .card-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin: 0 0 0.75rem;
+    }
+    .card-price {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+    .card-price span.per {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .card-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    .form-panel {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-lg);
+      padding: 1.35rem 1.25rem;
+      border: 1px solid #2a2a2a;
+      height: fit-content;
+      position: sticky;
+      top: 1rem;
+    }
+    .form-panel h2 {
+      margin: 0 0 0.35rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .form-panel .sub {
+      margin: 0 0 1.25rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .field { margin-bottom: 1rem; }
+    .field label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: 0.65rem 0.75rem;
+      border-radius: var(--radius-md);
+      border: 1px solid #333;
+      background: var(--bg-input);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .field input:focus, .field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .field input.error { border-color: var(--danger); }
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+    .checkbox-row input { width: auto; accent-color: var(--accent); }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      border-radius: var(--radius-pill);
+      padding: 0.65rem 1.1rem;
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    .btn-primary {
+      width: 100%;
+      margin-top: 0.25rem;
+      background: var(--accent);
+      color: #0a0a0a;
+    }
+    .btn-primary:hover { background: #3ddf82; }
+    .btn-primary:active { opacity: 0.92; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid #3a3a3a;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: var(--radius-md);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: #555; }
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid rgba(231, 76, 60, 0.45);
+      padding: 0.45rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: var(--radius-md);
+    }
+    .btn-danger:hover { background: rgba(231, 76, 60, 0.1); }
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      border: 1px dashed #333;
+      border-radius: var(--radius-lg);
+    }
+    .empty-state strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 0.35rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div>
+        <h1>Список подписок</h1>
+      </div>
+      <div class="badge-total" id="totalBadge" aria-live="polite"></div>
+    </header>
+    <div class="layout">
+      <div>
+        <p class="panel-title">Активные сервисы</p>
+        <div class="cards-grid" id="cardsGrid"></div>
+      </div>
+      <aside class="form-panel">
+        <h2 id="formTitle">Новая подписка</h2>
+        <p class="sub" id="formSub">Заполните поля и нажмите «Сохранить».</p>
+        <form id="subForm" novalidate>
+          <div class="field">
+            <label for="fName">Название</label>
+            <input id="fName" name="name" type="text" autocomplete="off" placeholder="Например, Netflix" />
+          </div>
+          <div class="row-2">
+            <div class="field">
+              <label for="fAmount">Сумма</label>
+              <input id="fAmount" name="amount" type="number" min="0" step="1" placeholder="599" />
+            </div>
+            <div class="field">
+              <label for="fCurrency">Валюта</label>
+              <input id="fCurrency" name="currency" type="text" maxlength="4" placeholder="₽" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="fPeriod">Период списания</label>
+            <select id="fPeriod" name="period">
+              <option value="month">Ежемесячно</option>
+              <option value="year">Раз в год</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fNext">Следующее списание</label>
+            <input id="fNext" name="nextRenewal" type="date" />
+          </div>
+          <div class="field">
+            <label for="fCategory">Категория (необязательно)</label>
+            <input id="fCategory" name="category" type="text" placeholder="Развлечения, работа…" />
+          </div>
+          <div class="field checkbox-row">
+            <input id="fActive" name="active" type="checkbox" checked />
+            <label for="fActive">Подписка активна</label>
+          </div>
+          <button type="submit" class="btn btn-primary" id="submitBtn">Сохранить</button>
+          <button type="button" class="btn btn-ghost" id="cancelEdit" style="display:none;width:100%;margin-top:0.5rem">Отменить редактирование</button>
+        </form>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "subscriptions_json_db";
+  var PERIOD_LABELS = { month: "в месяц", year: "в год" };
+
+  var state = { subscriptions: [] };
+  var editingId = null;
+
+  function uid() {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 9);
+  }
+
+  /** Встроенные демо-подписки (10 шт.): Netflix, YouTube, Spotify и т.д. */
+  function getDefaultSubscriptions() {
+    return [
+      { id: "demo-netflix", name: "Netflix", amount: 799, currency: "₽", period: "month", nextRenewal: "2026-05-18", category: "Видео", active: true, createdAt: "2026-05-01T12:00:00.000Z" },
+      { id: "demo-youtube", name: "YouTube Premium", amount: 299, currency: "₽", period: "month", nextRenewal: "2026-05-22", category: "Видео", active: true, createdAt: "2026-05-01T12:00:00.000Z" },
+      { id: "demo-spotify", name: "Spotify Premium", amount: 199, currency: "₽", period: "month", nextRenewal: "2026-05-15", category: "Музыка", active: true, createdAt: "2026-05-01T12:00:00.000Z" },
+      { id: "demo-apple-music", name: "Apple Music", amount: 169, currency: "₽", period: "month", nextRenewal: "2026-05-25", category: "Музыка", active: true, createdAt: "2026-05-01T12:00:00.000Z" },
+      { id: "demo-m365", name: "Microsoft 365 Personal", amount: 749, currency: "₽", period: "month", nextRenewal: "2026-06-01", category: "Работа", active: true, createdAt: "2026-05-01T12:00:00.000Z" },
+      { id: "demo-psn", name: "PlayStation Plus Essential", amount: 4999, currency: "₽", period: "year", nextRenewal: "2026-11-10", category: "Игры", active: true, createdAt: "2026-05-01T12:00:00.000Z" },
+      { id: "demo-icloud", name: "iCloud+", amount: 149, currency: "₽", period: "month", nextRenewal: "2026-05-28", category: "Облако", active: true, createdAt: "2026-05-01T12:00:00.000Z" },
+      { id: "demo-discord", name: "Discord Nitro", amount: 459, currency: "₽", period: "month", nextRenewal: "2026-05-20", category: "Соцсети", active: true, createdAt: "2026-05-01T12:00:00.000Z" },
+      { id: "demo-chatgpt", name: "ChatGPT Plus", amount: 2490, currency: "₽", period: "month", nextRenewal: "2026-05-30", category: "Работа", active: true, createdAt: "2026-05-01T12:00:00.000Z" },
+      { id: "demo-yandex", name: "Яндекс Плюс", amount: 299, currency: "₽", period: "month", nextRenewal: "2026-06-05", category: "Развлечения", active: true, createdAt: "2026-05-01T12:00:00.000Z" }
+    ];
+  }
+
+  function loadState() {
+    var defaults = getDefaultSubscriptions();
+    function applyDefaults() {
+      state = { subscriptions: JSON.parse(JSON.stringify(defaults)) };
+      persist();
+    }
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        applyDefaults();
+        return;
+      }
+      var data = JSON.parse(raw);
+      var subs = Array.isArray(data.subscriptions) ? data.subscriptions : [];
+      if (subs.length === 0) {
+        applyDefaults();
+        return;
+      }
+      state = { subscriptions: subs };
+    } catch (e) {
+      applyDefaults();
+    }
+  }
+
+  function persist() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ subscriptions: state.subscriptions }));
+  }
+
+  function formatMoney(amount, currency) {
+    var n = Number(amount);
+    if (isNaN(n)) return "—";
+    var cur = currency && String(currency).trim() ? String(currency).trim() : "₽";
+    return n.toLocaleString("ru-RU", { maximumFractionDigits: 0 }) + " " + cur;
+  }
+
+  function monthlyEquivalent(sub) {
+    var n = Number(sub.amount);
+    if (isNaN(n)) return 0;
+    return sub.period === "year" ? n / 12 : n;
+  }
+
+  function totalMonthly() {
+    return state.subscriptions
+      .filter(function (s) { return s.active !== false; })
+      .reduce(function (acc, s) { return acc + monthlyEquivalent(s); }, 0);
+  }
+
+  function getRefs() {
+    return {
+      cardsGrid: document.getElementById("cardsGrid"),
+      form: document.getElementById("subForm"),
+      formTitle: document.getElementById("formTitle"),
+      formSub: document.getElementById("formSub"),
+      totalBadge: document.getElementById("totalBadge"),
+      cancelEdit: document.getElementById("cancelEdit"),
+      submitBtn: document.getElementById("submitBtn"),
+    };
+  }
+
+  function resetForm(refs) {
+    refs.form.reset();
+    document.getElementById("fActive").checked = true;
+    editingId = null;
+    refs.formTitle.textContent = "Новая подписка";
+    refs.formSub.textContent = "Заполните поля и нажмите «Сохранить».";
+    refs.submitBtn.textContent = "Сохранить";
+    refs.cancelEdit.style.display = "none";
+    document.getElementById("fName").classList.remove("error");
+  }
+
+  function fillForm(sub) {
+    document.getElementById("fName").value = sub.name || "";
+    document.getElementById("fAmount").value = sub.amount != null ? sub.amount : "";
+    document.getElementById("fCurrency").value = sub.currency || "₽";
+    document.getElementById("fPeriod").value = sub.period === "year" ? "year" : "month";
+    document.getElementById("fNext").value = sub.nextRenewal || "";
+    document.getElementById("fCategory").value = sub.category || "";
+    document.getElementById("fActive").checked = sub.active !== false;
+  }
+
+  function pickIcon(category) {
+    var c = (category || "").toLowerCase();
+    if (/работ|office|slack|zoom|meet/i.test(c)) return "💼";
+    if (/музы|spotify|sound/i.test(c)) return "🎵";
+    if (/видео|кино|netflix|стрим/i.test(c)) return "🎬";
+    if (/игр|steam|playstation|xbox/i.test(c)) return "🎮";
+    if (/облак|cloud|drive|dropbox/i.test(c)) return "☁️";
+    return "✦";
+  }
+
+  function renderCards(refs) {
+    var grid = refs.cardsGrid;
+    grid.innerHTML = "";
+
+    var total = totalMonthly();
+    refs.totalBadge.innerHTML = "~ <strong>" +
+      total.toLocaleString("ru-RU", { maximumFractionDigits: 0 }) +
+      " ₽</strong> / мес. экв.";
+
+    if (state.subscriptions.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.innerHTML = "<strong>Пока нет подписок</strong>Добавьте первую в форме справа.";
+      grid.appendChild(empty);
+      return;
+    }
+
+    var sorted = state.subscriptions.slice().sort(function (a, b) {
+      var da = a.nextRenewal || "";
+      var db = b.nextRenewal || "";
+      return da.localeCompare(db);
+    });
+
+    sorted.forEach(function (sub) {
+      var card = document.createElement("article");
+      card.className = "card";
+      var active = sub.active !== false;
+      var icon = pickIcon(sub.category);
+
+      card.innerHTML =
+        '<div class="card-top">' +
+          '<div class="card-icon" aria-hidden="true">' + icon + "</div>" +
+          '<span class="status-dot ' + (active ? "" : "inactive") + '" title="' + (active ? "Активна" : "Неактивна") + '"></span>' +
+        "</div>" +
+        "<h3></h3>" +
+        '<p class="card-meta"></p>' +
+        '<div class="card-price"></div>' +
+        '<div class="card-actions"></div>';
+
+      card.querySelector("h3").textContent = sub.name || "Без названия";
+
+      var cat = (sub.category || "").trim();
+      var renew = sub.nextRenewal
+        ? new Date(sub.nextRenewal + "T12:00:00").toLocaleDateString("ru-RU")
+        : "дата не указана";
+      card.querySelector(".card-meta").textContent =
+        (cat ? cat + " · " : "") + "след. списание: " + renew;
+
+      var priceEl = card.querySelector(".card-price");
+      var per = PERIOD_LABELS[sub.period] || PERIOD_LABELS.month;
+      priceEl.textContent = "";
+      var priceMain = document.createElement("span");
+      priceMain.textContent = formatMoney(sub.amount, sub.currency);
+      var pricePer = document.createElement("span");
+      pricePer.className = "per";
+      pricePer.textContent = " " + per;
+      priceEl.appendChild(priceMain);
+      priceEl.appendChild(pricePer);
+
+      var actions = card.querySelector(".card-actions");
+      var editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "btn btn-ghost";
+      editBtn.textContent = "Изменить";
+      editBtn.addEventListener("click", function () {
+        editingId = sub.id;
+        fillForm(sub);
+        refs.formTitle.textContent = "Редактирование";
+        refs.formSub.textContent = sub.name || "";
+        refs.submitBtn.textContent = "Обновить";
+        refs.cancelEdit.style.display = "block";
+        document.getElementById("fName").focus();
+      });
+
+      var delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "btn btn-danger";
+      delBtn.textContent = "Удалить";
+      delBtn.addEventListener("click", function () {
+        if (!confirm("Удалить подписку «" + (sub.name || "") + "»?")) return;
+        state.subscriptions = state.subscriptions.filter(function (s) {
+          return s.id !== sub.id;
+        });
+        if (editingId === sub.id) resetForm(refs);
+        persist();
+        renderCards(refs);
+      });
+
+      actions.appendChild(editBtn);
+      actions.appendChild(delBtn);
+      grid.appendChild(card);
+    });
+  }
+
+  function readForm() {
+    return {
+      name: document.getElementById("fName").value.trim(),
+      amount: document.getElementById("fAmount").value,
+      currency: document.getElementById("fCurrency").value.trim() || "₽",
+      period: document.getElementById("fPeriod").value === "year" ? "year" : "month",
+      nextRenewal: document.getElementById("fNext").value,
+      category: document.getElementById("fCategory").value.trim(),
+      active: document.getElementById("fActive").checked,
+    };
+  }
+
+  function init() {
+    loadState();
+    var refs = getRefs();
+    renderCards(refs);
+
+    refs.form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var raw = readForm();
+      var nameInput = document.getElementById("fName");
+      if (!raw.name) {
+        nameInput.classList.add("error");
+        nameInput.focus();
+        return;
+      }
+      nameInput.classList.remove("error");
+
+      var amountNum = raw.amount === "" ? NaN : Number(raw.amount);
+      var payload = {
+        name: raw.name,
+        amount: isNaN(amountNum) ? 0 : amountNum,
+        currency: raw.currency,
+        period: raw.period,
+        nextRenewal: raw.nextRenewal || "",
+        category: raw.category,
+        active: raw.active,
+      };
+
+      if (editingId) {
+        var idx = state.subscriptions.findIndex(function (s) {
+          return s.id === editingId;
+        });
+        if (idx !== -1) {
+          state.subscriptions[idx] = Object.assign({}, state.subscriptions[idx], payload);
+        }
+      } else {
+        state.subscriptions.push(
+          Object.assign({ id: uid(), createdAt: new Date().toISOString() }, payload)
+        );
+      }
+
+      persist();
+      resetForm(refs);
+      renderCards(refs);
+    });
+
+    refs.cancelEdit.addEventListener("click", function () {
+      resetForm(refs);
+    });
+  }
+
+  init();
+})();
+  </script>
+</body>
+</html>
